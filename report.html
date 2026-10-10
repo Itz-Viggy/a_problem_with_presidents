@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U.S. Presidential Lifespans</title>
+<style>
+body { max-width: 850px; margin: 40px auto; padding: 0 24px;
+        color: #222; font: 16px/1.6 Georgia, serif; }
+h1, h2, th { font-family: Arial, sans-serif; }
+h1 { font-size: 30px; line-height: 1.2; margin-bottom: 8px; }
+h2 { font-size: 21px; margin-top: 30px; }
+.byline, figcaption { color: #555; font-size: 14px; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font: 14px/1.5 Arial, sans-serif; }
+th, td { padding: 9px 10px; border-bottom: 1px solid #ddd; text-align: right; }
+th { background: #eef2f5; }
+th:first-child, td:first-child, .ranking th:nth-child(2),
+.ranking td:nth-child(2) { text-align: left; }
+.ranking td:nth-child(2) { white-space: nowrap; }
+figure { margin: 20px 0; }
+svg { display: block; width: 100%; height: auto; font: 13px Arial, sans-serif; }
+@media print { body { margin: 0; } table, figure { break-inside: avoid; }
+                 h2 { break-after: avoid; } }
+</style>
+</head>
+<body>
+<h1>U.S. Presidential Lifespans</h1>
+<p class="byline">Vignesh Sundararajan<br>October 09, 2026</p>
+<p>The supplied dataset contains 45 presidents, of whom 39 have recorded death dates.
+Among those 39, the mean lifespan is 26,097.18 days and the median is 25,673 days.
+George Bush has the longest recorded lifespan at 34,504 days,
+and John F. Kennedy has the shortest at 16,978 days.
+The 6 records without death dates are excluded from lifespan comparisons.</p>
+
+<h2>Methods and assumptions</h2>
+<p>This analysis uses the supplied CSV as a historical snapshot, with no updated death dates.
+The reference row at the end is excluded. Each president appears once, including Grover Cleveland.
+Birth year is extracted from the birth date. Lived years and lived months are total completed
+calendar years and months, respectively. Lived days is the exact difference between death and
+birth dates, including leap days. Missing death dates leave all three lifespan fields blank
+in the accompanying presidents.csv. These blanks are excluded from the tables and plot.</p>
+<p>Rankings use exact lived days. The weighted average uses each distinct lifespan's frequency
+as its weight: sum(days &times; frequency) / sum(frequency). This equals the mean because each
+president contributes one observation. The population standard deviation divides the sum of
+squared deviations by 39, describing all recorded completed lifespans in this dataset.
+There is no mode because every observed lived-days value occurs once.</p>
+
+<h2>10 longest recorded lifespans</h2>
+<div class="table-wrap"><table class="ranking"><thead><tr><th scope="col">Rank</th><th scope="col">President</th><th scope="col">Birth year</th><th scope="col">Years</th><th scope="col">Months</th><th scope="col">Days</th></tr></thead><tbody><tr><td>1</td><td>George Bush</td><td>1924</td><td>94</td><td>1133</td><td>34,504</td></tr><tr><td>2</td><td>Gerald Ford</td><td>1913</td><td>93</td><td>1121</td><td>34,133</td></tr><tr><td>3</td><td>Ronald Reagan</td><td>1911</td><td>93</td><td>1119</td><td>34,088</td></tr><tr><td>4</td><td>John Adams</td><td>1735</td><td>90</td><td>1088</td><td>33,119</td></tr><tr><td>5</td><td>Herbert Hoover</td><td>1874</td><td>90</td><td>1082</td><td>32,943</td></tr><tr><td>6</td><td>Harry S. Truman</td><td>1884</td><td>88</td><td>1063</td><td>32,373</td></tr><tr><td>7</td><td>James Madison</td><td>1751</td><td>85</td><td>1023</td><td>31,150</td></tr><tr><td>8</td><td>Thomas Jefferson</td><td>1743</td><td>83</td><td>998</td><td>30,397</td></tr><tr><td>9</td><td>Richard Nixon</td><td>1913</td><td>81</td><td>975</td><td>29,688</td></tr><tr><td>10</td><td>John Quincy Adams</td><td>1767</td><td>80</td><td>967</td><td>29,446</td></tr></tbody></table></div>
+<h2>10 shortest recorded lifespans</h2>
+<div class="table-wrap"><table class="ranking"><thead><tr><th scope="col">Rank</th><th scope="col">President</th><th scope="col">Birth year</th><th scope="col">Years</th><th scope="col">Months</th><th scope="col">Days</th></tr></thead><tbody><tr><td>1</td><td>John F. Kennedy</td><td>1917</td><td>46</td><td>557</td><td>16,978</td></tr><tr><td>2</td><td>James A. Garfield</td><td>1831</td><td>49</td><td>598</td><td>18,202</td></tr><tr><td>3</td><td>James K. Polk</td><td>1795</td><td>53</td><td>643</td><td>19,583</td></tr><tr><td>4</td><td>Abraham Lincoln</td><td>1809</td><td>56</td><td>674</td><td>20,516</td></tr><tr><td>5</td><td>Chester Arthur</td><td>1829</td><td>57</td><td>685</td><td>20,863</td></tr><tr><td>6</td><td>Warren G. Harding</td><td>1865</td><td>57</td><td>693</td><td>21,091</td></tr><tr><td>7</td><td>William McKinley</td><td>1843</td><td>58</td><td>703</td><td>21,412</td></tr><tr><td>8</td><td>Theodore Roosevelt</td><td>1858</td><td>60</td><td>722</td><td>21,985</td></tr><tr><td>9</td><td>Calvin Coolidge</td><td>1872</td><td>60</td><td>726</td><td>22,099</td></tr><tr><td>10</td><td>Franklin Roosevelt</td><td>1882</td><td>63</td><td>758</td><td>23,082</td></tr></tbody></table></div>
+<p class="byline">Years and months are separate totals of completed calendar units.
+Days is the exact elapsed lifespan.</p>
+
+<h2>Descriptive statistics</h2>
+<div class="table-wrap"><table class=""><thead><tr><th scope="col">Measure</th><th scope="col">Lived days</th></tr></thead><tbody><tr><td>Mean</td><td>26,097.18</td></tr><tr><td>Weighted average (frequency weights)</td><td>26,097.18</td></tr><tr><td>Median</td><td>25,673.00</td></tr><tr><td>Mode</td><td>None (every value occurs once)</td></tr><tr><td>Maximum</td><td>34,504</td></tr><tr><td>Minimum</td><td>16,978</td></tr><tr><td>Standard deviation (population)</td><td>4,536.77</td></tr></tbody></table></div>
+
+<h2>Distribution of lived days</h2>
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 335" role="img" aria-labelledby="plot-title plot-description"><title id="plot-title">Distribution of presidential lifespans</title><desc id="plot-description">Number of presidents in each lifespan interval: 15,000 to under 17,500 days: 1; 17,500 to under 20,000 days: 2; 20,000 to under 22,500 days: 6; 22,500 to under 25,000 days: 10; 25,000 to under 27,500 days: 6; 27,500 to under 30,000 days: 6; 30,000 to under 32,500 days: 3; 32,500 to under 35,000 days: 5.</desc><path d="M65,275.0h710" stroke="#ddd"/><text x="53" y="279.0" text-anchor="end">0</text><path d="M65,235.0h710" stroke="#ddd"/><text x="53" y="239.0" text-anchor="end">2</text><path d="M65,195.0h710" stroke="#ddd"/><text x="53" y="199.0" text-anchor="end">4</text><path d="M65,155.0h710" stroke="#ddd"/><text x="53" y="159.0" text-anchor="end">6</text><path d="M65,115.0h710" stroke="#ddd"/><text x="53" y="119.0" text-anchor="end">8</text><path d="M65,75.0h710" stroke="#ddd"/><text x="53" y="79.0" text-anchor="end">10</text><path d="M65,35.0h710" stroke="#ddd"/><text x="53" y="39.0" text-anchor="end">12</text><rect x="66.0" y="255.0" width="86.75" height="20.0" fill="#35648a"/><text x="109.375" y="248.0" text-anchor="middle">1</text><rect x="154.75" y="235.0" width="86.75" height="40.0" fill="#35648a"/><text x="198.125" y="228.0" text-anchor="middle">2</text><rect x="243.5" y="155.0" width="86.75" height="120.0" fill="#35648a"/><text x="286.875" y="148.0" text-anchor="middle">6</text><rect x="332.25" y="75.0" width="86.75" height="200.0" fill="#35648a"/><text x="375.625" y="68.0" text-anchor="middle">10</text><rect x="421.0" y="155.0" width="86.75" height="120.0" fill="#35648a"/><text x="464.375" y="148.0" text-anchor="middle">6</text><rect x="509.75" y="155.0" width="86.75" height="120.0" fill="#35648a"/><text x="553.125" y="148.0" text-anchor="middle">6</text><rect x="598.5" y="215.0" width="86.75" height="60.0" fill="#35648a"/><text x="641.875" y="208.0" text-anchor="middle">3</text><rect x="687.25" y="175.0" width="86.75" height="100.0" fill="#35648a"/><text x="730.625" y="168.0" text-anchor="middle">5</text><text x="65.0" y="297" text-anchor="middle">15,000</text><text x="153.75" y="297" text-anchor="middle">17,500</text><text x="242.5" y="297" text-anchor="middle">20,000</text><text x="331.25" y="297" text-anchor="middle">22,500</text><text x="420.0" y="297" text-anchor="middle">25,000</text><text x="508.75" y="297" text-anchor="middle">27,500</text><text x="597.5" y="297" text-anchor="middle">30,000</text><text x="686.25" y="297" text-anchor="middle">32,500</text><text x="775.0" y="297" text-anchor="middle">35,000</text><text x="420" y="327" text-anchor="middle">Days lived</text><text transform="translate(18 155) rotate(-90)" text-anchor="middle">Number of presidents</text></svg>
+<figcaption>The histogram groups the 39 recorded lifespans into intervals of 2,500 days.
+Each interval includes its lower boundary and excludes its upper boundary.
+This shows where lifespans cluster and how widely they vary.</figcaption>
+</figure>
+
+<h2>Conclusions</h2>
+<p>The recorded lifespans range from 16,978 to 34,504 days,
+a difference of 17,526 days. The mean and median are close,
+with a population standard deviation of 4,536.77 days indicating substantial variation.
+These results describe presidents with death dates in the supplied historical dataset.
+They do not estimate the eventual lifespans of presidents whose death dates are missing.</p>
+<p class="byline">Source: U.S. Presidents Birth and Death Information - Sheet1.csv,
+supplied with the repository. Its reference credits
+<a href="https://www.presidentsusa.net/birth.html">PresidentsUSA.Net</a>,
+retrieved September 28, 2021.</p>
+</body>
+</html>

@@ -3,6 +3,14 @@
 - Author: Christopher P. Barnes, Samantha Emerson
 - Date: September 28, 2021
 
+## Solution
+
+Run `python3 analyze.py` with Python 3. No additional packages are needed.
+
+This creates `presidents.csv` with the four new variables and `report.html` with
+the rankings, descriptive statistics, and histogram. Open the report in a browser.
+The analysis uses the supplied dataset without updating missing death dates.
+
 ## Problem Statement:
 
 A fairly common statement you may hear is that data becomes information, information becomes knowledge, and knowledge becomes wisdom. Our job is primarily involved in using computer code, mathematics and experience to convert data into information. To become information, the data must be taken from a source, transformed into input, processed by a set of algorithms, transformed into output, and delivered to a consumer.
