@@ -1,4 +1,4 @@
-# Repository rules
+# Repository rules (simplified for this task)
 
 - Keep runtime dependencies limited to Python's standard library.
 - Preserve the original source CSV, license, and assignment text.
