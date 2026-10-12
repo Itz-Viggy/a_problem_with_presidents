@@ -14,81 +14,173 @@ MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
 
 
 def parse_date(text):
-    month, day, year = text.replace(",", "").split()
-    return date(int(year), MONTHS.index(month[:3]) + 1, int(day))
+    """Read dates such as 'Feb 22, 1732' and 'July 4, 1826'."""
+    month_name, day, year = text.replace(",", "").split()
+    # The source mixes abbreviated and full month names.
+    month_number = MONTHS.index(month_name[:3]) + 1
+    return date(int(year), month_number, int(day))
 
 
 def load_presidents():
+    """Keep the original fields and add birth year and completed lifespan units."""
     presidents = []
     with SOURCE.open(newline="", encoding="utf-8-sig") as source:
         for row in csv.DictReader(source):
+            # The last CSV row is a citation, not a president.
             if row["PRESIDENT"].startswith("Reference:"):
                 continue
-            birth = parse_date(row["BIRTH DATE"])
-            row.update(year_of_birth=birth.year, lived_years=None,
-                       lived_months=None, lived_days=None)
+
+            birth_date = parse_date(row["BIRTH DATE"])
+            row["year_of_birth"] = birth_date.year
+            row["lived_years"] = None
+            row["lived_months"] = None
+            row["lived_days"] = None
+
+            # A missing death date means the completed lifespan is unknown.
             if row["DEATH DATE"].strip():
-                death = parse_date(row["DEATH DATE"])
-                if death < birth:
+                death_date = parse_date(row["DEATH DATE"])
+                if death_date < birth_date:
                     raise ValueError(f"Death precedes birth: {row['PRESIDENT']}")
-                row["lived_days"] = (death - birth).days
-                row["lived_years"] = death.year - birth.year - (
-                    (death.month, death.day) < (birth.month, birth.day))
-                row["lived_months"] = (
-                    (death.year - birth.year) * 12 + death.month - birth.month
-                    - (death.day < birth.day))
+
+                row["lived_days"] = (death_date - birth_date).days
+
+                # Subtract one year if the final birthday was not reached.
+                years = death_date.year - birth_date.year
+                birthday = (birth_date.month, birth_date.day)
+                if (death_date.month, death_date.day) < birthday:
+                    years -= 1
+                row["lived_years"] = years
+
+                # Months is a total, rather than the months left after years.
+                months = (death_date.year - birth_date.year) * 12
+                months += death_date.month - birth_date.month
+                if death_date.day < birth_date.day:
+                    months -= 1
+                row["lived_months"] = months
+
             presidents.append(row)
     return presidents
 
 
+def save_presidents(presidents):
+    with (ROOT / "presidents.csv").open("w", newline="", encoding="utf-8") as output:
+        writer = csv.DictWriter(
+            output, fieldnames=list(presidents[0]), lineterminator="\n"
+        )
+        writer.writeheader()
+        writer.writerows(presidents)
+
+
+def calculate_statistics(lived_days):
+    """Summarize completed lifespans, with one observation per president."""
+    frequencies = Counter(lived_days)
+
+    # No separate weights are supplied, so use each lifespan's frequency.
+    weighted_total = 0
+    for days, frequency in frequencies.items():
+        weighted_total += days * frequency
+    weighted_average = weighted_total / len(lived_days)
+
+    if max(frequencies.values()) == 1:
+        mode = "None (every value occurs once)"
+    else:
+        modes = sorted(statistics.multimode(lived_days))
+        mode = ", ".join(f"{days:,}" for days in modes)
+
+    return {
+        "Mean": statistics.mean(lived_days),
+        "Weighted average (frequency weights)": weighted_average,
+        "Median": statistics.median(lived_days),
+        "Mode": mode,
+        "Maximum": max(lived_days),
+        "Minimum": min(lived_days),
+        # Describe the whole set of recorded lifespans, using population SD.
+        "Standard deviation (population)": statistics.pstdev(lived_days),
+    }
+
+
 def table(headers, rows, css_class=""):
-    headings = "".join(f'<th scope="col">{escape(str(h))}</th>' for h in headers)
-    body = "".join(
-        "<tr>" + "".join(f"<td>{escape(str(v))}</td>" for v in row) + "</tr>"
-        for row in rows)
+    """Build an HTML table, escaping text from the source data."""
+    heading_cells = []
+    for heading in headers:
+        heading_cells.append(f'<th scope="col">{escape(str(heading))}</th>')
+    headings = "".join(heading_cells)
+
+    body_rows = []
+    for row in rows:
+        cells = []
+        for value in row:
+            cells.append(f"<td>{escape(str(value))}</td>")
+        body_rows.append("<tr>" + "".join(cells) + "</tr>")
+    body = "".join(body_rows)
+
     return (f'<div class="table-wrap"><table class="{css_class}">'
             f"<thead><tr>{headings}</tr></thead><tbody>{body}</tbody></table></div>")
 
 
 def ranking_table(presidents):
-    return table(
-        ["Rank", "President", "Birth year", "Years", "Months", "Days"],
-        [(rank, row["PRESIDENT"], row["year_of_birth"], row["lived_years"],
-          row["lived_months"], f"{row['lived_days']:,}")
-         for rank, row in enumerate(presidents[:10], 1)], "ranking")
+    headers = ["Rank", "President", "Birth year", "Years", "Months", "Days"]
+    rows = []
+    for rank, president in enumerate(presidents[:10], start=1):
+        rows.append([
+            rank,
+            president["PRESIDENT"],
+            president["year_of_birth"],
+            president["lived_years"],
+            president["lived_months"],
+            f"{president['lived_days']:,}",
+        ])
+    return table(headers, rows, "ranking")
 
 
 def histogram(days):
+    """Draw a histogram as SVG so the report needs no plotting packages."""
     bin_width = 2500
     start = min(days) // bin_width * bin_width
     stop = (max(days) // bin_width + 1) * bin_width
     edges = list(range(start, stop + 1, bin_width))
-    counts = [sum(low <= day < high for day in days)
-              for low, high in zip(edges, edges[1:])]
-    ceiling = (max(counts) // 2 + 1) * 2
-    left, top, width, height = 65, 35, 710, 240
-    bar_width = width / len(counts)
+
+    counts = []
+    intervals = []
+    for lower, upper in zip(edges, edges[1:]):
+        count = 0
+        for day in days:
+            if lower <= day < upper:
+                count += 1
+        counts.append(count)
+        intervals.append(f"{lower:,} to under {upper:,} days: {count}")
+
+    # Leave space around the plot for axis labels and counts above the bars.
+    y_axis_max = (max(counts) // 2 + 1) * 2
+    plot_left, plot_top = 65, 35
+    plot_width, plot_height = 710, 240
+    bar_width = plot_width / len(counts)
+    description = "; ".join(intervals)
     parts = [
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 335" '
         'role="img" aria-labelledby="plot-title plot-description">',
         '<title id="plot-title">Distribution of presidential lifespans</title>',
         '<desc id="plot-description">Number of presidents in each lifespan interval: '
-        + "; ".join(f"{low:,} to under {high:,} days: {count}"
-                    for low, high, count in zip(edges, edges[1:], counts)) + ".</desc>"]
-    for tick in range(0, ceiling + 1, 2):
-        y = top + height - tick / ceiling * height
-        parts.append(f'<path d="M{left},{y}h{width}" stroke="#ddd"/>')
-        parts.append(f'<text x="{left - 12}" y="{y + 4}" text-anchor="end">{tick}</text>')
-    for i, count in enumerate(counts):
-        x = left + i * bar_width
-        bar_height = count / ceiling * height
-        y = top + height - bar_height
+        f'{description}.</desc>',
+    ]
+
+    for tick in range(0, y_axis_max + 1, 2):
+        y = plot_top + plot_height - tick / y_axis_max * plot_height
+        parts.append(f'<path d="M{plot_left},{y}h{plot_width}" stroke="#ddd"/>')
+        parts.append(f'<text x="{plot_left - 12}" y="{y + 4}" '
+                     f'text-anchor="end">{tick}</text>')
+
+    for index, count in enumerate(counts):
+        x = plot_left + index * bar_width
+        bar_height = count / y_axis_max * plot_height
+        y = plot_top + plot_height - bar_height
         parts.append(f'<rect x="{x + 1}" y="{y}" width="{bar_width - 2}" '
                      f'height="{bar_height}" fill="#35648a"/>')
         parts.append(f'<text x="{x + bar_width / 2}" y="{y - 7}" '
                      f'text-anchor="middle">{count}</text>')
-    for i, edge in enumerate(edges):
-        parts.append(f'<text x="{left + i * bar_width}" y="{top + height + 22}" '
+    for index, edge in enumerate(edges):
+        x = plot_left + index * bar_width
+        parts.append(f'<text x="{x}" y="{plot_top + plot_height + 22}" '
                      f'text-anchor="middle">{edge:,}</text>')
     parts.extend([
         '<text x="420" y="327" text-anchor="middle">Days lived</text>',
@@ -97,37 +189,27 @@ def histogram(days):
     return "".join(parts)
 
 
-def main():
-    presidents = load_presidents()
-    with (ROOT / "presidents.csv").open("w", newline="", encoding="utf-8") as output:
-        writer = csv.DictWriter(output, fieldnames=list(presidents[0]),
-                                lineterminator="\n")
-        writer.writeheader()
-        writer.writerows(presidents)
+def write_report(presidents, completed_presidents, summary):
+    ordered = sorted(completed_presidents, key=lambda row: row["lived_days"])
+    longest_first = list(reversed(ordered))
+    days = [row["lived_days"] for row in completed_presidents]
+    mean = summary["Mean"]
+    median = summary["Median"]
+    deviation = summary["Standard deviation (population)"]
 
-    deceased = [row for row in presidents if row["lived_days"] is not None]
-    ordered = sorted(deceased, key=lambda row: row["lived_days"])
-    days = [row["lived_days"] for row in deceased]
-    frequencies = Counter(days)
-    mean = statistics.mean(days)
-    weighted_average = sum(value * count for value, count in frequencies.items()) / sum(
-        frequencies.values())
-    modes = statistics.multimode(days)
-    mode = ("None (every value occurs once)" if max(frequencies.values()) == 1
-            else ", ".join(f"{value:,}" for value in sorted(modes)))
-    median = statistics.median(days)
-    deviation = statistics.pstdev(days)
-    measures = table(["Measure", "Lived days"], [
-        ("Mean", f"{mean:,.2f}"),
-        ("Weighted average (frequency weights)", f"{weighted_average:,.2f}"),
-        ("Median", f"{median:,.2f}"),
-        ("Mode", mode),
-        ("Maximum", f"{max(days):,}"),
-        ("Minimum", f"{min(days):,}"),
-        ("Standard deviation (population)", f"{deviation:,.2f}"),
-    ])
+    statistics_rows = []
+    for measure, value in summary.items():
+        if isinstance(value, str):
+            formatted_value = value
+        elif measure in ("Maximum", "Minimum"):
+            formatted_value = f"{value:,}"
+        else:
+            formatted_value = f"{value:,.2f}"
+        statistics_rows.append([measure, formatted_value])
+    measures = table(["Measure", "Lived days"], statistics_rows)
+
     shortest, longest = ordered[0], ordered[-1]
-    missing = len(presidents) - len(deceased)
+    missing = len(presidents) - len(completed_presidents)
     report = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -157,8 +239,8 @@ svg {{ display: block; width: 100%; height: auto; font: 13px Arial, sans-serif; 
 <body>
 <h1>U.S. Presidential Lifespans</h1>
 <p class="byline">{escape(AUTHOR)}<br>{REPORT_DATE.strftime('%B %d, %Y')}</p>
-<p>The supplied dataset contains {len(presidents)} presidents, of whom {len(deceased)} have recorded death dates.
-Among those {len(deceased)}, the mean lifespan is {mean:,.2f} days and the median is {median:,.0f} days.
+<p>The supplied dataset contains {len(presidents)} presidents, of whom {len(completed_presidents)} have recorded death dates.
+Among those {len(completed_presidents)}, the mean lifespan is {mean:,.2f} days and the median is {median:,.0f} days.
 {escape(longest['PRESIDENT'])} has the longest recorded lifespan at {longest['lived_days']:,} days,
 and {escape(shortest['PRESIDENT'])} has the shortest at {shortest['lived_days']:,} days.
 The {missing} records without death dates are excluded from lifespan comparisons.</p>
@@ -173,11 +255,11 @@ in the accompanying presidents.csv. These blanks are excluded from the tables an
 <p>Rankings use exact lived days. The weighted average uses each distinct lifespan's frequency
 as its weight: sum(days &times; frequency) / sum(frequency). This equals the mean because each
 president contributes one observation. The population standard deviation divides the sum of
-squared deviations by {len(deceased)}, describing all recorded completed lifespans in this dataset.
+squared deviations by {len(completed_presidents)}, describing all recorded completed lifespans in this dataset.
 There is no mode because every observed lived-days value occurs once.</p>
 
 <h2>10 longest recorded lifespans</h2>
-{ranking_table(list(reversed(ordered)))}
+{ranking_table(longest_first)}
 <h2>10 shortest recorded lifespans</h2>
 {ranking_table(ordered)}
 <p class="byline">Years and months are separate totals of completed calendar units.
@@ -189,7 +271,7 @@ Days is the exact elapsed lifespan.</p>
 <h2>Distribution of lived days</h2>
 <figure>
 {histogram(days)}
-<figcaption>The histogram groups the {len(deceased)} recorded lifespans into intervals of 2,500 days.
+<figcaption>The histogram groups the {len(completed_presidents)} recorded lifespans into intervals of 2,500 days.
 Each interval includes its lower boundary and excludes its upper boundary.
 This shows where lifespans cluster and how widely they vary.</figcaption>
 </figure>
@@ -208,7 +290,23 @@ retrieved September 28, 2021.</p>
 </html>
 """
     (ROOT / "report.html").write_text(report, encoding="utf-8")
-    print(f"Analyzed {len(deceased)} completed lifespans; {missing} death dates missing.")
+
+
+def main():
+    presidents = load_presidents()
+    save_presidents(presidents)
+
+    completed_presidents = []
+    for president in presidents:
+        if president["lived_days"] is not None:
+            completed_presidents.append(president)
+
+    lived_days = [president["lived_days"] for president in completed_presidents]
+    summary = calculate_statistics(lived_days)
+    write_report(presidents, completed_presidents, summary)
+
+    missing = len(presidents) - len(completed_presidents)
+    print(f"Analyzed {len(completed_presidents)} completed lifespans; {missing} death dates missing.")
     print("Created presidents.csv and report.html.")
 
 
