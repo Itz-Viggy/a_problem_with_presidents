@@ -7,5 +7,4 @@
   do not edit generated results by hand.
 - After analysis changes, review the affected calculations and outputs.
 - Inspect the report in a browser when its layout or plot changes.
-- Run `git diff --check` before committing.
-- Do not push unless explicitly requested.
+
